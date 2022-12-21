@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Consumers
+namespace Consumers.ConsumerTypes
 {
     public abstract class BaseConsumer
     {

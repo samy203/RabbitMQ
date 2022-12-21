@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Producer
+namespace Producer.ProducerTypes
 {
-    internal class HeadersExchangeProducer : BaseProducer
+    internal class AlternateExchangeProducer : BaseProducer
     {
-        public HeadersExchangeProducer()
+        public AlternateExchangeProducer()
         {
-            MediumName = "headers-exchange";
+            MediumName = "main-exchange";
             Configure();
         }
 
@@ -26,21 +26,20 @@ namespace Producer
 
             Channel = connection.CreateModel();
 
-            Channel.ExchangeDeclare(MediumName, ExchangeType.Headers);
+
+            Channel.ExchangeDeclare("alt-exchange", ExchangeType.Fanout);
+
+            Channel.ExchangeDeclare(MediumName, ExchangeType.Direct, arguments: new Dictionary<string, object>
+            {
+                {"alternate-exchange" , "alt-exchange" }
+            });
         }
 
         public override void Publish(string message, string routingKey = "")
         {
-            var properties = Channel.CreateBasicProperties();
-
-            properties.Headers = new Dictionary<string, object>{
-                {"type", "payment"},
-                {"region","eu" }
-            };
-
             var encodedMsg = Encoding.UTF8.GetBytes(message);
 
-            Channel.BasicPublish(MediumName, "", properties, encodedMsg);
+            Channel.BasicPublish(MediumName, "test", null, encodedMsg);
         }
     }
 }

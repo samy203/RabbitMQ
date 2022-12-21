@@ -6,11 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Consumers
+namespace Consumers.ConsumerTypes
 {
-    public class ExchangeToExchangeConsumer : BaseConsumer
+    public class QueueConsumer : BaseConsumer
     {
-        public ExchangeToExchangeConsumer(string id, Action<string> reportingAction)
+        public QueueConsumer(string id, Action<string> reportingAction)
         {
             this.id = id;
             this.reportingAction = reportingAction;
@@ -30,23 +30,28 @@ namespace Consumers
 
             channel = connection.CreateModel();
 
-            channel.ExchangeDeclare("final-exchange", ExchangeType.Fanout);
+            channel.QueueDeclare("letterbox", false, false, false, null);
 
-            channel.QueueDeclare("letterbox",false,false,false,null);
-
-            channel.QueueBind("letterbox", "final-exchange", "0");
+            channel.BasicQos(0, 1, false);
 
             var consumer = new EventingBasicConsumer(channel);
 
+            var random = new Random();
+
             consumer.Received += (sender, args) =>
             {
+                var processingTime = random.Next(1, 6);
                 var body = args.Body.ToArray();
                 var decodedMsg = Encoding.UTF8.GetString(body);
 
-                reportingAction.Invoke($"\n{decodedMsg} is Recieved from final-exchange");
+                reportingAction.Invoke($"\n{decodedMsg} is being processed by node id : {id} | ETA : {processingTime} Seconds");
+
+                Task.Delay(TimeSpan.FromSeconds(processingTime)).Wait();
+
+                channel.BasicAck(args.DeliveryTag, false);
             };
 
-            channel.BasicConsume("letterbox", true, consumer);
+            channel.BasicConsume("letterbox", false, consumer);
         }
     }
 }

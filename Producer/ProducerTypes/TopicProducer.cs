@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Producer
+namespace Producer.ProducerTypes
 {
-    internal class DeadLetterExchangeProducer : BaseProducer
+    internal class TopicProducer : BaseProducer
     {
-        public DeadLetterExchangeProducer()
+        public TopicProducer()
         {
-            MediumName = "main-exchange";
+            MediumName = "topic-exchange";
             Configure();
         }
 
@@ -26,14 +26,14 @@ namespace Producer
 
             Channel = connection.CreateModel();
 
-            Channel.ExchangeDeclare(MediumName, ExchangeType.Direct);
+            Channel.ExchangeDeclare(MediumName , ExchangeType.Topic);
         }
 
-        public override void Publish(string message, string routingKey = "")
+        public override void Publish(string message, string routingKey)
         {
             var encodedMsg = Encoding.UTF8.GetBytes(message);
 
-            Channel.BasicPublish(MediumName, "test", null, encodedMsg);
+            Channel.BasicPublish(MediumName, routingKey, null, encodedMsg);
         }
     }
 }

@@ -6,13 +6,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Consumers
+namespace Consumers.ConsumerTypes
 {
-    public class HeadersExchangeConsumer : BaseConsumer
+    public class PubsubConsumer : BaseConsumer
     {
-        public HeadersExchangeConsumer(string id, Action<string> reportingAction)
+        private string exchangeName;
+        public PubsubConsumer(string id,string exchangeName, Action<string> reportingAction)
         {
             this.id = id;
+            this.exchangeName = exchangeName;
             this.reportingAction = reportingAction;
             Configure();
         }
@@ -30,29 +32,23 @@ namespace Consumers
 
             channel = connection.CreateModel();
 
-            channel.ExchangeDeclare("headers-exchange", ExchangeType.Headers);
+            channel.ExchangeDeclare(exchangeName, ExchangeType.Fanout);
 
-            channel.QueueDeclare("letterbox", false, false, false, null);
-
-            var bindingArguments = new Dictionary<string, object>{
-                {"x-match", "all"},
-                {"type", "payment"},
-                {"region", "eu"}
-        };
-
-            channel.QueueBind("letterbox", "headers-exchange", "", bindingArguments);
+            var queueName = channel.QueueDeclare().QueueName;
 
             var consumer = new EventingBasicConsumer(channel);
+
+            channel.QueueBind(queueName, exchangeName, "");
+
 
             consumer.Received += (sender, args) =>
             {
                 var body = args.Body.ToArray();
                 var decodedMsg = Encoding.UTF8.GetString(body);
-
-                reportingAction.Invoke($"\n{decodedMsg} is Recieved using Header Exchange");
+                reportingAction.Invoke($"\n{decodedMsg} is being processed by node id : {id}");
             };
 
-            channel.BasicConsume("letterbox", true, consumer);
+            channel.BasicConsume(queueName, true, consumer);
         }
     }
 }
